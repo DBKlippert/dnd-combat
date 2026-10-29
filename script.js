@@ -716,14 +716,17 @@ function rollMonsterInitiative() {
 }
 
 function showScreen(screen){
-    document.getElementById("combatScreen").style.display = "none";
-    document.getElementById("creaturesScreen").style.display = "none";
-    document.getElementById("playersScreen").style.display = "none";
-    document.getElementById("npcsScreen").style.display = "none";
-    document.getElementById("storyNpcsScreen").style.display = "none";
-    document.getElementById("encounterScreen").style.display = "none";
-    document.getElementById("lootScreen").style.display = "none";
-    document.getElementById(screen + "Screen").style.display = "block";
+    let screens = document.querySelectorAll("section[id$='Screen']");
+    for (let section of screens) {
+        section.style.display = "none";
+    }
+
+    let selectedScreen = document.getElementById(screen + "Screen") ||
+        document.getElementById(screen);
+    if (selectedScreen) {
+        selectedScreen.style.display = "block";
+    }
+
     for (let button of document.querySelectorAll("nav button[data-screen]")) {
         let isSelected = button.dataset.screen === screen;
         button.classList.toggle("selected", isSelected);
@@ -1191,6 +1194,7 @@ function saveStoryNpc() {
     document.getElementById("storyNpcHP").value = "";
     document.getElementById("storyNpcAC").value = "";
     document.getElementById("storyNpcNotes").value = "";
+    alert("Story NPC saved.");
 }
 
 function displayNpcLibrary() {
