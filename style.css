@@ -152,6 +152,17 @@ button:active {
     color: #ffffff;
 }
 
+.npc-tag {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 6px;
+    border: 1px solid #85a78f;
+    border-radius: 4px;
+    color: #cde2d1;
+    font-size: 0.8rem;
+    font-weight: normal;
+}
+
 .remove-effect-button {
     padding: 2px 6px;
     margin: 0;
@@ -293,7 +304,8 @@ nav button:focus-visible {
 }
 
 .list-controls select,
-#lootScreen input:not([type="button"]) {
+#lootScreen input:not([type="button"]),
+#npcsScreen input {
     padding: 10px;
     border: 1px solid #c9a66b;
     border-radius: 4px;

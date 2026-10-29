@@ -12,6 +12,8 @@ let currentTurn = -1;
 let round = 1;
 let creatureLibrary = loadLibrary("creatureLibrary");
 let editingCreatureId = null;
+let npcLibrary = loadLibrary("npcLibrary");
+let editingNpcId = null;
 let playerLibrary = loadLibrary("playerLibrary");
 let editingPlayerId = null;
 let lootLibrary = loadLibrary("lootLibrary");
@@ -77,7 +79,7 @@ function nextTurn(){
         }
         checked++;
         let combatant = combatants[currentTurn];
-        if(combatant.type !== "monster"||combatant.hp>0){
+        if(combatant.type === "player" || combatant.hp > 0){
             document.getElementById("round").textContent=round;
             displayCombatants();
             return;
@@ -100,7 +102,13 @@ function displayCombatants(){
         entry.id=combatant.id;
         
         let label = document.createElement("span");
-        label.textContent = "" + combatant.name;
+        label.textContent = combatant.name;
+        if (combatant.type === "npc") {
+            let npcTag = document.createElement("span");
+            npcTag.className = "npc-tag";
+            npcTag.textContent = "NPC";
+            label.appendChild(npcTag);
+        }
         
         let initiativeInput = document.createElement("input");
 
@@ -216,9 +224,9 @@ function displayCombatants(){
             }
         }
 
-        if (combatant.type === "monster"){
+        if (combatant.type === "monster" || combatant.type === "npc"){
             let hpDisplay = document.createElement("span");
-            hpDisplay.textContent = " - " + combatant.hp + "/" + combatant.maxHP + "HP";
+            hpDisplay.textContent = " - " + combatant.hp + "/" + combatant.maxHP + " HP";
             
             entry.appendChild(hpDisplay);
             
@@ -249,7 +257,7 @@ function displayCombatants(){
         if (currentTurn >= 0 && combatants[currentTurn].id === combatant.id){
             entry.classList.add("active");
         }
-        if (combatant.type === "monster" && combatant.hp === 0){
+        if ((combatant.type === "monster" || combatant.type === "npc") && combatant.hp === 0){
             entry.classList.add("defeated");
         }
         if (combatant.type === "player" && combatant.down){
@@ -273,10 +281,12 @@ function updateCombatDanger() {
     let panel = document.getElementById("combatDanger");
     let title = document.getElementById("combatDangerTitle");
     let details = document.getElementById("combatDangerDetails");
-    let monsters = combatants.filter(combatant => combatant.type === "monster");
+    let encounterCreatures = combatants.filter(combatant =>
+        combatant.type === "monster" || combatant.type === "npc"
+    );
     let players = combatants.filter(combatant => combatant.type === "player");
 
-    if (monsters.length === 0) {
+    if (encounterCreatures.length === 0) {
         panel.className = "danger-rating danger-neutral";
         title.textContent = "No encounter";
         details.textContent = "Add players and creatures to see the difficulty.";
@@ -290,11 +300,11 @@ function updateCombatDanger() {
         return;
     }
 
-    let rating = rateEncounter(monsters, players);
+    let rating = rateEncounter(encounterCreatures, players);
     panel.className = "danger-rating danger-" + rating.difficulty.toLowerCase();
     title.textContent = rating.difficulty;
     details.textContent = rating.adjustedXP + " adjusted XP across " +
-        monsters.length + " creature(s) and " + players.length + " player(s).";
+        encounterCreatures.length + " creature(s) and " + players.length + " player(s).";
 }
 
 function buildEncounterState() {
@@ -342,7 +352,7 @@ function restoreEncounterState(state) {
         !state.combatants.every(combatant =>
             combatant && typeof combatant.id === "string" &&
             typeof combatant.name === "string" &&
-            (combatant.type === "player" || combatant.type === "monster")
+            (combatant.type === "player" || combatant.type === "monster" || combatant.type === "npc")
         )) {
         return false;
     }
@@ -419,7 +429,7 @@ function restoreCurrentEncounter() {
 
 function changeHP(id, amount){
     let monster = combatants.find(c=>c.id===id);
-    if(!monster||monster.type !== "monster"){
+    if(!monster || (monster.type !== "monster" && monster.type !== "npc")){
         return;
     }
     if (!Number.isFinite(amount)||!Number.isInteger(amount)||amount === 0){
@@ -496,12 +506,18 @@ function checkCombatFinished() {
     }
 
     let rewardableMonsters = monsters.filter(monster => !lootedMonsterIds.has(monster.id));
-    if (rewardableMonsters.length === 0) return;
+    let protectedNpcs = combatants.filter(combatant =>
+        combatant.type === "npc" && combatant.hp > 0 && !lootedMonsterIds.has(combatant.id)
+    );
+    let rewardableCombatants = rewardableMonsters.concat(protectedNpcs);
+    if (rewardableCombatants.length === 0) return;
 
     lootGenerated = true;
-    rewardableMonsters.forEach(monster => lootedMonsterIds.add(monster.id));
-    let totalXP = rewardableMonsters.reduce((sum, monster) => {
-        let challengeRating = monster.challengeRating || "0";
+    rewardableCombatants.forEach(combatant => lootedMonsterIds.add(combatant.id));
+    let protectedNpcXP = protectedNpcs.length * challengeRatingXP["1/8"];
+    let totalXP = rewardableCombatants.reduce((sum, combatant) => {
+        let challengeRating = combatant.challengeRating ||
+            (combatant.type === "npc" ? "1/8" : "0");
         return sum + (challengeRatingXP[challengeRating] || 10);
     }, 0);
     let party = combatants.filter(combatant => combatant.type === "player");
@@ -522,6 +538,13 @@ function checkCombatFinished() {
         tier === "Uncommon" ? 0.35 :
         tier === "Rare" ? 0.5 : 0.65;
     let rewards = document.createElement("ul");
+    let xpReward = document.createElement("li");
+    xpReward.textContent = totalXP + " XP earned" +
+        (protectedNpcXP > 0
+            ? " (includes " + protectedNpcXP + " bonus XP for " + protectedNpcs.length + " protected NPC(s))"
+            : "");
+    rewards.appendChild(xpReward);
+
     let coins = document.createElement("li");
     coins.textContent = gold + " gp";
     rewards.appendChild(coins);
@@ -656,6 +679,7 @@ function showScreen(screen){
     document.getElementById("combatScreen").style.display = "none";
     document.getElementById("creaturesScreen").style.display = "none";
     document.getElementById("playersScreen").style.display = "none";
+    document.getElementById("npcsScreen").style.display = "none";
     document.getElementById("encounterScreen").style.display = "none";
     document.getElementById("lootScreen").style.display = "none";
     document.getElementById(screen + "Screen").style.display = "block";
@@ -1038,6 +1062,98 @@ function displayPlayerLibrary() {
     }
 }
 
+function saveNpc() {
+    let name = document.getElementById("npcName").value.trim();
+    let hpText = document.getElementById("npcHP").value;
+    let acText = document.getElementById("npcAC").value;
+    let hp = Number(hpText);
+    let ac = Number(acText);
+
+    if (!name || hpText === "" || !Number.isInteger(hp) || hp <= 0 ||
+        acText === "" || !Number.isInteger(ac) || ac <= 0) {
+        alert("Enter a name, positive hit points, and a positive AC.");
+        return;
+    }
+
+    if (editingNpcId === null) {
+        npcLibrary.push({
+            id: "npc-" + Date.now() + "-" + Math.random(),
+            name: name,
+            hp: hp,
+            ac: ac,
+            challengeRating: "1/8",
+            level: 1
+        });
+    } else {
+        let npc = npcLibrary.find(item => item.id === editingNpcId);
+        if (!npc) return;
+        npc.name = name;
+        npc.hp = hp;
+        npc.ac = ac;
+    }
+
+    editingNpcId = null;
+    document.getElementById("saveNpcButton").textContent = "Save NPC";
+    localStorage.setItem("npcLibrary", JSON.stringify(npcLibrary));
+    document.getElementById("npcSearch").value = "";
+    displayNpcLibrary();
+    document.getElementById("npcName").value = "";
+    document.getElementById("npcHP").value = "";
+    document.getElementById("npcAC").value = "";
+}
+
+function displayNpcLibrary() {
+    let list = document.getElementById("npcList");
+    list.innerHTML = "";
+    let query = document.getElementById("npcSearch").value.trim().toLowerCase();
+    let sortOrder = document.getElementById("npcSort").value;
+    let visibleNpcs = npcLibrary.filter(npc => npc.name.toLowerCase().includes(query));
+
+    visibleNpcs.sort((first, second) => {
+        if (sortOrder === "hp-asc" || sortOrder === "hp-desc") {
+            let hpOrder = first.hp - second.hp;
+            return sortOrder === "hp-asc" ? hpOrder : -hpOrder;
+        }
+        let nameOrder = first.name.localeCompare(second.name, undefined, { sensitivity: "base" });
+        return sortOrder === "name-desc" ? -nameOrder : nameOrder;
+    });
+
+    for (let npc of visibleNpcs) {
+        let entry = document.createElement("p");
+        entry.textContent = npc.name + " | HP: " + npc.hp + " | AC: " + npc.ac +
+            " | CR: 1/8 | Level: 1";
+
+        let addButton = document.createElement("button");
+        addButton.textContent = "Add to Combat";
+        addButton.className = "add-combat-button";
+        addButton.onclick = function() {
+            addNpcToCombat(npc.id);
+        };
+        entry.appendChild(addButton);
+
+        let editButton = document.createElement("button");
+        editButton.textContent = "Edit";
+        editButton.className = "edit-button";
+        editButton.onclick = function() {
+            editNpc(npc.id);
+        };
+        entry.appendChild(editButton);
+
+        let deleteButton = document.createElement("button");
+        deleteButton.textContent = "Delete";
+        deleteButton.className = "delete-button";
+        deleteButton.onclick = function() {
+            deleteNpc(npc.id);
+        };
+        entry.appendChild(deleteButton);
+        list.appendChild(entry);
+    }
+
+    if (visibleNpcs.length === 0) {
+        list.textContent = query ? "No matching NPCs." : "No saved NPCs yet.";
+    }
+}
+
 function saveLoot() {
     let name = document.getElementById("lootName").value.trim();
     let rarity = document.getElementById("lootRarity").value;
@@ -1171,6 +1287,29 @@ function addPlayerToCombat(playerId) {
     displayCombatants();
 }
 
+function addNpcToCombat(npcId) {
+    let npc = npcLibrary.find(item => item.id === npcId);
+    if (!npc) return;
+
+    combatants.push({
+        id: "combat-npc-" + Date.now() + "-" + Math.random(),
+        libraryId: npc.id,
+        name: npc.name,
+        type: "npc",
+        initiative: null,
+        initiativeModifier: 0,
+        hp: npc.hp,
+        maxHP: npc.hp,
+        ac: npc.ac,
+        challengeRating: "1/8",
+        level: 1,
+        effects: []
+    });
+    clearCombatLoot();
+    displayCombatants();
+    checkCombatFinished();
+}
+
 function deletePlayer(id) {
     let player = playerLibrary.find(p => p.id===id);
     if(!player) return;
@@ -1186,6 +1325,33 @@ function deletePlayer(id) {
     );
 
     displayPlayerLibrary();
+}
+
+function editNpc(id) {
+    let npc = npcLibrary.find(item => item.id === id);
+    if (!npc) return;
+    editingNpcId = id;
+    document.getElementById("npcName").value = npc.name;
+    document.getElementById("npcHP").value = npc.hp;
+    document.getElementById("npcAC").value = npc.ac;
+    document.getElementById("saveNpcButton").textContent = "Update NPC";
+}
+
+function deleteNpc(id) {
+    let npc = npcLibrary.find(item => item.id === id);
+    if (!npc || !confirm("Permanently delete " + npc.name + " from your NPC library?")) {
+        return;
+    }
+    npcLibrary = npcLibrary.filter(item => item.id !== id);
+    if (editingNpcId === id) {
+        editingNpcId = null;
+        document.getElementById("saveNpcButton").textContent = "Save NPC";
+        document.getElementById("npcName").value = "";
+        document.getElementById("npcHP").value = "";
+        document.getElementById("npcAC").value = "";
+    }
+    localStorage.setItem("npcLibrary", JSON.stringify(npcLibrary));
+    displayNpcLibrary();
 }
 
 function addCreatureToCombat(creatureId) {
@@ -1272,6 +1438,7 @@ function exportSavedData() {
         version: 1,
         creatureLibrary: creatureLibrary,
         playerLibrary: playerLibrary,
+        npcLibrary: npcLibrary,
         lootLibrary: lootLibrary
     };
     let file = new Blob([JSON.stringify(backup, null, 2)], {
@@ -1319,6 +1486,17 @@ function importSavedData(event) {
                     (player.level === undefined ||
                         (Number.isInteger(player.level) && player.level >= 1 && player.level <= 20))
                 );
+            let validNpcs = backup &&
+                (backup.npcLibrary === undefined ||
+                    (Array.isArray(backup.npcLibrary) &&
+                        backup.npcLibrary.every(npc =>
+                            npc && typeof npc.id === "string" &&
+                            typeof npc.name === "string" &&
+                            Number.isFinite(npc.hp) && npc.hp > 0 &&
+                            Number.isFinite(npc.ac) && npc.ac > 0 &&
+                            (npc.challengeRating === undefined || npc.challengeRating === "1/8") &&
+                            (npc.level === undefined || npc.level === 1)
+                        )));
             let validLoot = backup &&
                 (backup.lootLibrary === undefined ||
                     (Array.isArray(backup.lootLibrary) &&
@@ -1329,24 +1507,28 @@ function importSavedData(event) {
                             (item.details === undefined || typeof item.details === "string")
                         )));
 
-            if (!validCreatures || !validPlayers || !validLoot) {
+            if (!validCreatures || !validPlayers || !validNpcs || !validLoot) {
                 alert("That file is not a valid DM's Grimoire backup.");
                 return;
             }
 
-            if (!confirm("Replace the saved creatures, players, and loot on this computer with this backup? Older backups without a loot list will keep the current loot.")) {
+            if (!confirm("Replace the saved creatures, players, NPCs, and loot on this computer with this backup? Older backups without NPCs or loot will keep the current libraries.")) {
                 return;
             }
 
             localStorage.setItem("creatureLibrary", JSON.stringify(backup.creatureLibrary));
             localStorage.setItem("playerLibrary", JSON.stringify(backup.playerLibrary));
+            let importedNpcs = backup.npcLibrary === undefined ? npcLibrary : backup.npcLibrary;
+            localStorage.setItem("npcLibrary", JSON.stringify(importedNpcs));
             let importedLoot = backup.lootLibrary === undefined ? lootLibrary : backup.lootLibrary;
             localStorage.setItem("lootLibrary", JSON.stringify(importedLoot));
             creatureLibrary = backup.creatureLibrary;
             playerLibrary = backup.playerLibrary;
+            npcLibrary = importedNpcs;
             lootLibrary = importedLoot;
             displayCreatureLibrary();
             displayPlayerLibrary();
+            displayNpcLibrary();
             displayLootLibrary();
             alert("Backup imported.");
         } catch (error) {
@@ -1374,5 +1556,6 @@ if (!restoreCurrentEncounter()) {
 }
 displayCreatureLibrary();
 displayPlayerLibrary();
+displayNpcLibrary();
 displayLootLibrary();
 

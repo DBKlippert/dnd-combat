@@ -12,6 +12,7 @@
         <button type="button" data-screen="encounter" onclick="showScreen('encounter')">Encounter Builder</button>
         <button type="button" data-screen="creatures" onclick="showScreen('creatures')">Creatures</button>
         <button type="button" data-screen="players" onclick="showScreen('players')">Players</button>
+        <button type="button" data-screen="npcs" onclick="showScreen('npcs')">NPCs</button>
         <button type="button" data-screen="loot" onclick="showScreen('loot')">Loot</button>
     </nav>
     <div class="backup-controls">
@@ -222,6 +223,29 @@
             </select>
         </div>
         <div id="playerList"></div>
+    </section>
+
+    <section id="npcsScreen" style="display: none;">
+        <h2>NPC Library</h2>
+        <h3>Add Neutral or Noncombat NPC (CR 1/8, Level 1)</h3>
+        <label for="npcName">Name</label>
+        <input id="npcName" placeholder="NPC name">
+        <label for="npcHP">Hit Points</label>
+        <input id="npcHP" type="number" min="1" placeholder="Hit Points">
+        <label for="npcAC">Armor Class</label>
+        <input id="npcAC" type="number" min="1" placeholder="Armor Class">
+        <button id="saveNpcButton" type="button" onclick="saveNpc()">Save NPC</button>
+        <h3>Saved NPCs</h3>
+        <div class="list-controls">
+            <input id="npcSearch" type="search" aria-label="Search NPCs by name" placeholder="Search NPCs by name" oninput="displayNpcLibrary()">
+            <select id="npcSort" aria-label="Sort NPCs" onchange="displayNpcLibrary()">
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+                <option value="hp-asc">HP low to high</option>
+                <option value="hp-desc">HP high to low</option>
+            </select>
+        </div>
+        <div id="npcList"></div>
     </section>
 
     <section id="lootScreen" style="display: none;">
