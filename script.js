@@ -135,6 +135,12 @@ function displayCombatants(){
             npcTag.textContent = "NPC";
             label.appendChild(npcTag);
         }
+        if (combatant.type === "storyNpc") {
+            let storyNpcTag = document.createElement("span");
+            storyNpcTag.className = "npc-tag story-npc-tag";
+            storyNpcTag.textContent = "Story";
+            label.appendChild(storyNpcTag);
+        }
         
         let initiativeInput = document.createElement("input");
 
@@ -250,7 +256,7 @@ function displayCombatants(){
             }
         }
 
-        if (combatant.type === "monster" || combatant.type === "npc"){
+        if (combatant.type === "monster" || combatant.type === "npc" || combatant.type === "storyNpc"){
             let hpDisplay = document.createElement("span");
             hpDisplay.textContent = " - " + combatant.hp + "/" + combatant.maxHP + " HP";
             
@@ -283,7 +289,7 @@ function displayCombatants(){
         if (currentTurn >= 0 && combatants[currentTurn].id === combatant.id){
             entry.classList.add("active");
         }
-        if ((combatant.type === "monster" || combatant.type === "npc") && combatant.hp === 0){
+        if ((combatant.type === "monster" || combatant.type === "npc" || combatant.type === "storyNpc") && combatant.hp === 0){
             entry.classList.add("defeated");
         }
         if (combatant.type === "player" && combatant.down){
@@ -313,7 +319,7 @@ function updateCombatDanger() {
     let title = document.getElementById("combatDangerTitle");
     let details = document.getElementById("combatDangerDetails");
     let encounterCreatures = combatants.filter(combatant =>
-        combatant.type === "monster" || combatant.type === "npc"
+        combatant.type === "monster" || combatant.type === "npc" || combatant.type === "storyNpc"
     );
     let players = combatants.filter(combatant => combatant.type === "player");
 
@@ -383,7 +389,7 @@ function restoreEncounterState(state) {
         !state.combatants.every(combatant =>
             combatant && typeof combatant.id === "string" &&
             typeof combatant.name === "string" &&
-            (combatant.type === "player" || combatant.type === "monster" || combatant.type === "npc")
+            (combatant.type === "player" || combatant.type === "monster" || combatant.type === "npc" || combatant.type === "storyNpc")
         )) {
         return false;
     }
@@ -460,7 +466,7 @@ function restoreCurrentEncounter() {
 
 function changeHP(id, amount){
     let monster = combatants.find(c=>c.id===id);
-    if(!monster || (monster.type !== "monster" && monster.type !== "npc")){
+    if(!monster || (monster.type !== "monster" && monster.type !== "npc" && monster.type !== "storyNpc")){
         return;
     }
     if (!Number.isFinite(amount)||!Number.isInteger(amount)||amount === 0){
@@ -534,7 +540,7 @@ function checkCombatFinished() {
     if (lootGenerated) return;
 
     let hostileCombatants = combatants.filter(combatant =>
-        combatant.type === "monster" || combatant.type === "npc"
+        combatant.type === "monster" || combatant.type === "npc" || combatant.type === "storyNpc"
     );
     if (hostileCombatants.length === 0) return;
     if (hostileCombatants.some(combatant => combatant.hp > 0)) return;
@@ -543,7 +549,8 @@ function checkCombatFinished() {
         combatant.type === "monster" && !lootedMonsterIds.has(combatant.id)
     );
     let protectedNpcs = hostileCombatants.filter(combatant =>
-        combatant.type === "npc" && combatant.hp > 0 && !lootedMonsterIds.has(combatant.id)
+        (combatant.type === "npc" || combatant.type === "storyNpc") &&
+        combatant.hp > 0 && !lootedMonsterIds.has(combatant.id)
     );
     let rewardableCombatants = rewardableMonsters.concat(protectedNpcs);
     if (rewardableCombatants.length === 0) return;
@@ -698,7 +705,7 @@ function sortInitiative(){
 
 function rollMonsterInitiative() {
     let hostileCombatants = combatants.filter(combatant =>
-        combatant.type === "monster" || combatant.type === "npc"
+        combatant.type === "monster" || combatant.type === "npc" || combatant.type === "storyNpc"
     );
     if (hostileCombatants.length === 0) {
         alert("Add a monster or NPC to combat before rolling initiative.");
@@ -706,6 +713,10 @@ function rollMonsterInitiative() {
     }
 
     for (let combatant of hostileCombatants) {
+        if (Number.isFinite(combatant.initiative)) {
+            continue;
+        }
+
         let modifier = Number.isFinite(combatant.initiativeModifier)
             ? combatant.initiativeModifier
             : Number(combatant.initiative) || 0;
@@ -716,14 +727,16 @@ function rollMonsterInitiative() {
 }
 
 function showScreen(screen){
-    let screens = document.querySelectorAll("section[id$='Screen']");
+    let screens = document.querySelectorAll(".screen");
     for (let section of screens) {
+        section.classList.remove("active");
         section.style.display = "none";
     }
 
     let selectedScreen = document.getElementById(screen + "Screen") ||
         document.getElementById(screen);
     if (selectedScreen) {
+        selectedScreen.classList.add("active");
         selectedScreen.style.display = "block";
     }
 
@@ -1479,7 +1492,7 @@ function addStoryNpcToCombat(storyNpcId) {
         id: "combat-story-npc-" + Date.now() + "-" + Math.random(),
         libraryId: storyNpc.id,
         name: storyNpc.name,
-        type: "npc",
+        type: "storyNpc",
         initiative: null,
         initiativeModifier: 0,
         hp: storyNpc.hp,

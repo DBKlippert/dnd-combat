@@ -5,6 +5,14 @@ body{
     padding: 20px;
 }
 
+.screen {
+    display: none;
+}
+
+.screen.active {
+    display: block;
+}
+
 h1{
     color: #c9a66b;
     text-align:center;
@@ -161,6 +169,12 @@ button:active {
     color: #cde2d1;
     font-size: 0.8rem;
     font-weight: normal;
+}
+
+.story-npc-tag {
+    border-color: #d3b26a;
+    color: #f5e4b1;
+    background: rgba(211, 178, 106, 0.12);
 }
 
 .remove-effect-button {

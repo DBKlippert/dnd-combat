@@ -21,7 +21,7 @@
         <button onclick="document.getElementById('backupFile').click()">Import Backup</button>
         <input id="backupFile" type="file" accept=".json,application/json" hidden onchange="importSavedData(event)">
     </div>
-    <section id="combatScreen">
+    <section id="combatScreen" class="screen active">
     <h2>Combat Encounter</h2>
 
     <p>Round: <span id="round">1</span></p>
@@ -52,7 +52,7 @@
     </div>
     </section>
 
-    <section id="encounterScreen" style="display: none;">
+    <section id="encounterScreen" class="screen" style="display: none;">
         <h2>Random Encounter</h2>
         <label for="encounterCR">Target Challenge Rating</label>
         <select id="encounterCR">
@@ -137,7 +137,7 @@
         </form>
     </dialog>
     
-    <section id="creaturesScreen" style="display: none;">
+    <section id="creaturesScreen" class="screen" style="display: none;">
         <h2>Creature Library</h2>
         <h3>Add New Creature</h3>
         <input id="creatureName"
@@ -201,7 +201,7 @@
         <div id="creatureList"></div>
     </section>
     
-    <section id="playersScreen" style="display: none;">
+    <section id="playersScreen" class="screen" style="display: none;">
         <h2>Player Library</h2>
         <h3>Add New Player</h3>
         <input id="playerName" placeholder="Character Name">
@@ -226,7 +226,7 @@
         <div id="playerList"></div>
     </section>
 
-    <section id="npcsScreen" style="display: none;">
+    <section id="npcsScreen" class="screen" style="display: none;">
         <h2>NPC Library</h2>
         <h3>Add Neutral or Noncombat NPC (CR 1/8, Level 1)</h3>
         <label for="npcName">Name</label>
@@ -249,7 +249,7 @@
         <div id="npcList"></div>
     </section>
 
-    <section id="storyNpcsScreen" style="display: none;">
+    <section id="storyNpcsScreen" class="screen" style="display: none;">
         <h2>Story NPC / Specialty Character Library</h2>
         <h3>Add Specialty Character</h3>
         <label for="storyNpcName">Name</label>
@@ -276,7 +276,7 @@
         <div id="storyNpcList"></div>
     </section>
 
-    <section id="lootScreen" style="display: none;">
+    <section id="lootScreen" class="screen" style="display: none;">
         <h2>Loot Library</h2>
         <h3>Add Loot</h3>
         <label for="lootName">Name</label>
