@@ -1,0 +1,345 @@
+body{
+    background-color:#1c1c24;
+    color: #e8dcc5;
+    font-family: Georgia, serif;
+    padding: 20px;
+}
+
+h1{
+    color: #c9a66b;
+    text-align:center;
+}
+
+h2{
+    border-bottom: 2px solid #c9a66b;
+    padding-bottom: 10px;
+}
+
+h3{
+    color: #c9a66b;
+}
+
+p{
+    background-color:#2b2b36;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+button{
+    background-color: #7a5435;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor:pointer;
+    transition: transform 80ms ease, filter 80ms ease, box-shadow 80ms ease;
+}
+
+button:active {
+    transform: translateY(2px);
+    filter: brightness(0.82);
+    box-shadow: inset 0 2px 3px rgb(0 0 0 / 35%);
+}
+
+.danger-rating {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin: 12px 0;
+    padding: 10px 12px;
+    border: 1px solid #59615e;
+    border-left-width: 5px;
+    border-radius: 4px;
+    background: #2b2b36;
+}
+
+.danger-rating strong {
+    font-size: 1.05rem;
+}
+
+.danger-neutral {
+    border-left-color: #89928e;
+    color: #e8dcc5;
+}
+
+.danger-easy {
+    border-color: #57a773;
+    background: #173d2b;
+    color: #dcffe8;
+}
+
+.danger-medium {
+    border-color: #d7ad35;
+    background: #4b3b0d;
+    color: #fff1b8;
+}
+
+.danger-hard {
+    border-color: #df8740;
+    background: #542f14;
+    color: #ffe1c1;
+}
+
+.danger-deadly {
+    border-color: #dd6269;
+    background: #511d25;
+    color: #ffdfe1;
+}
+
+.active{
+    background-color: #66502e;
+    border: 2px solid #c9a66b;
+    font-weight: bold;
+}
+
+.hp-input{
+    width: 55px;
+    padding: 8px;
+    margin: 5px;
+    background-color: #1c1c24;
+    color: #e8dcc5;
+    border: 1px solid #c9a66b;
+    border-radius: 5px;
+}
+
+#combatantList button {
+    padding: 8px 12px;
+    margin: 4px;
+}
+
+.encounter-save-controls,
+.combat-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.encounter-save-controls span {
+    flex: 1 1 220px;
+    color: #c9c8bd;
+}
+
+.combat-actions button,
+.encounter-save-controls button {
+    padding: 10px 14px;
+}
+
+.encounter-save-controls button:disabled {
+    cursor: not-allowed;
+    filter: grayscale(0.7);
+    opacity: 0.6;
+}
+
+.effect-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0;
+}
+
+.effect-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    background: #245438;
+    border: 1px solid #4caf50;
+    border-radius: 4px;
+    color: #ffffff;
+}
+
+.remove-effect-button {
+    padding: 2px 6px;
+    margin: 0;
+    background: #652222;
+    font-size: 13px;
+}
+
+dialog {
+    width: min(420px, calc(100% - 32px));
+    padding: 20px;
+    border: 1px solid #c9a66b;
+    border-radius: 6px;
+    background: #1c1c24;
+    color: #e8dcc5;
+}
+
+dialog::backdrop {
+    background: rgb(0 0 0 / 65%);
+}
+
+dialog form {
+    display: grid;
+    gap: 10px;
+}
+
+dialog h2 {
+    margin: 0;
+}
+
+dialog p {
+    margin: 0;
+}
+
+dialog input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #c9a66b;
+    border-radius: 4px;
+    background: #2b2b36;
+    color: #ffffff;
+}
+
+.effect-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+@media (max-width: 520px) {
+    #combatantList p {
+        overflow-wrap: anywhere;
+    }
+
+    .effect-dialog-actions button {
+        padding: 10px 12px;
+    }
+}
+
+.defeated {
+    background-color: #651c1c;
+    border: 2px solid #e53935;
+    color: #ffffff;
+}
+
+.downed {
+    background-color: #684419;
+    border: 2px solid #f0a030;
+    color: white;
+}
+
+.stabilized {
+    background-color: #245438;
+    border: 2px solid #4caf50;
+    color: white;
+}
+
+.initiative-input {
+    width: 55px;
+    padding: 8px;
+    margin: 5px;
+    background-color: #1c1c24;
+    color: #e8dcc5;
+    border: 1px solid #c9a66b;
+    border-radius: 5px;
+}
+
+nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 16px 0;
+    padding: 4px;
+    border: 1px solid #424c48;
+    border-radius: 6px;
+    background: #232a28;
+}
+
+nav button {
+    flex: 1 1 130px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #deddd1;
+}
+
+nav button:hover:not(.selected) {
+    background: #343c39;
+}
+
+nav button.selected {
+    border-color: #85a78f;
+    background: #365845;
+    color: #ffffff;
+}
+
+nav button:focus-visible {
+    outline: 2px solid #e8c879;
+    outline-offset: 2px;
+}
+
+.list-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.list-controls input {
+    flex: 1 1 220px;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #c9a66b;
+    border-radius: 4px;
+    background: #2b2b36;
+    color: #ffffff;
+}
+
+.list-controls select,
+#lootScreen input:not([type="button"]) {
+    padding: 10px;
+    border: 1px solid #c9a66b;
+    border-radius: 4px;
+    background: #2b2b36;
+    color: #ffffff;
+}
+
+#lootScreen select {
+    margin: 4px 8px 8px 0;
+    padding: 10px;
+    border: 1px solid #c9a66b;
+    border-radius: 4px;
+    background: #2b2b36;
+    color: #ffffff;
+}
+
+section {
+    margin-top: 15px;
+}
+
+.add-combat-button {
+    margin-left: 20px;
+}
+
+.edit-button {
+    margin-left: 10px;
+}
+
+.delete-button {
+    margin-left: 10px;
+    background-color: #652222;
+    border: 1px solid #cc4444;
+    color: white;
+}
+
+.delete-button:hover {
+    background-color: #993333;
+}
+
+@media (max-width: 520px) {
+    nav {
+        gap: 3px;
+    }
+
+    nav button {
+        flex-basis: calc(50% - 3px);
+        padding: 10px 8px;
+    }
+}

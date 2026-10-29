@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>DM's Grimoire</title>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>DM's Grimoire</h1>
+    <nav aria-label="Main navigation">
+        <button type="button" data-screen="combat" aria-current="page" onclick="showScreen('combat')">Combat</button>
+        <button type="button" data-screen="encounter" onclick="showScreen('encounter')">Encounter Builder</button>
+        <button type="button" data-screen="creatures" onclick="showScreen('creatures')">Creatures</button>
+        <button type="button" data-screen="players" onclick="showScreen('players')">Players</button>
+        <button type="button" data-screen="loot" onclick="showScreen('loot')">Loot</button>
+    </nav>
+    <div class="backup-controls">
+        <button onclick="exportSavedData()">Export Backup</button>
+        <button onclick="document.getElementById('backupFile').click()">Import Backup</button>
+        <input id="backupFile" type="file" accept=".json,application/json" hidden onchange="importSavedData(event)">
+    </div>
+    <section id="combatScreen">
+    <h2>Combat Encounter</h2>
+
+    <p>Round: <span id="round">1</span></p>
+    <div class="encounter-save-controls">
+        <button type="button" onclick="saveEncounter()">Save Encounter</button>
+        <button type="button" id="resumeEncounterButton" onclick="resumeSavedEncounter()" disabled>Resume Saved</button>
+        <span id="encounterSaveStatus" role="status" aria-live="polite">Encounter autosaves on this device.</span>
+    </div>
+
+    <div id="combatDanger" class="danger-rating danger-neutral" role="status" aria-live="polite">
+        <strong id="combatDangerTitle">No encounter</strong>
+        <span id="combatDangerDetails">Add players and creatures to see the difficulty.</span>
+    </div>
+
+    <h3>Initiative Order</h3>
+    
+    <div id="combatantList"></div>
+
+    <div class="combat-actions">
+        <button type="button" onclick="rollMonsterInitiative()">Roll Monster Initiative</button>
+        <button type="button" onclick="sortInitiative()">Sort Initiative</button>
+        <button type="button" onclick="nextTurn()">Next Turn</button>
+        <button type="button" onclick="resetCombat()">Reset Combat</button>
+    </div>
+    <div id="lootPanel" hidden aria-live="polite">
+        <h3>Encounter Loot</h3>
+        <div id="lootResults"></div>
+    </div>
+    </section>
+
+    <section id="encounterScreen" style="display: none;">
+        <h2>Random Encounter</h2>
+        <label for="encounterCR">Target Challenge Rating</label>
+        <select id="encounterCR">
+            <option value="0">0</option>
+            <option value="1/8">1/8</option>
+            <option value="1/4">1/4</option>
+            <option value="1/2">1/2</option>
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+            <option value="16">16</option>
+            <option value="17">17</option>
+            <option value="18">18</option>
+            <option value="19">19</option>
+            <option value="20">20</option>
+            <option value="21">21</option>
+            <option value="22">22</option>
+            <option value="23">23</option>
+            <option value="24">24</option>
+            <option value="25">25</option>
+            <option value="26">26</option>
+            <option value="27">27</option>
+            <option value="28">28</option>
+            <option value="29">29</option>
+            <option value="30">30</option>
+        </select>
+        <button onclick="generateRandomEncounter()">Generate Monsters</button>
+        <div id="generatedEncounter" aria-live="polite"></div>
+        <button id="addGeneratedEncounterButton" onclick="addGeneratedEncounterToCombat()" hidden>
+            Add Set to Combat
+        </button>
+    </section>
+
+    <dialog id="effectDialog" aria-labelledby="effectDialogTitle" onclose="resetEffectDialog()">
+        <form id="effectForm" onsubmit="event.preventDefault(); addCombatantEffect();">
+            <h2 id="effectDialogTitle">Add Effect</h2>
+            <p>Target: <strong id="effectTargetName"></strong></p>
+            <label for="effectName">Effect</label>
+            <input id="effectName" list="commonEffects" required placeholder="Choose or enter an effect">
+            <datalist id="commonEffects">
+                <option value="Blinded"></option>
+                <option value="Charmed"></option>
+                <option value="Deafened"></option>
+                <option value="Exhaustion"></option>
+                <option value="Frightened"></option>
+                <option value="Grappled"></option>
+                <option value="Incapacitated"></option>
+                <option value="Invisible"></option>
+                <option value="Paralyzed"></option>
+                <option value="Petrified"></option>
+                <option value="Poisoned"></option>
+                <option value="Prone"></option>
+                <option value="Restrained"></option>
+                <option value="Stunned"></option>
+                <option value="Unconscious"></option>
+                <option value="Sleep"></option>
+                <option value="Bless"></option>
+                <option value="Concentrating"></option>
+                <option value="Haste"></option>
+                <option value="Hex"></option>
+            </datalist>
+            <label for="effectDuration">Duration in target's turns (optional)</label>
+            <input id="effectDuration" type="number" min="1" step="1" placeholder="Number of turns">
+            <label for="effectNotes">Notes (optional)</label>
+            <input id="effectNotes" placeholder="Additional details">
+            <div class="effect-dialog-actions">
+                <button type="button" onclick="document.getElementById('effectDialog').close()">Cancel</button>
+                <button type="submit">Apply Effect</button>
+            </div>
+        </form>
+    </dialog>
+    
+    <section id="creaturesScreen" style="display: none;">
+        <h2>Creature Library</h2>
+        <h3>Add New Creature</h3>
+        <input id="creatureName"
+            placeholder="Creature Name">
+        <input id="creatureHP" type="number"
+            placeholder="Hit Points">
+        <input id="creatureAC" type="number"
+            placeholder="Armor Class">
+        <input id="creatureInit" type="number"
+            placeholder="Initiative Modifier">
+        <label for="creatureCR">Challenge Rating</label>
+        <select id="creatureCR">
+            <option value="0">0</option>
+            <option value="1/8">1/8</option>
+            <option value="1/4" selected>1/4</option>
+            <option value="1/2">1/2</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+            <option value="16">16</option>
+            <option value="17">17</option>
+            <option value="18">18</option>
+            <option value="19">19</option>
+            <option value="20">20</option>
+            <option value="21">21</option>
+            <option value="22">22</option>
+            <option value="23">23</option>
+            <option value="24">24</option>
+            <option value="25">25</option>
+            <option value="26">26</option>
+            <option value="27">27</option>
+            <option value="28">28</option>
+            <option value="29">29</option>
+            <option value="30">30</option>
+        </select>
+
+        <button id="saveCreatureButton" onclick="saveCreature()">Save Creature</button>
+        
+        <h3>Saved Creatures</h3>
+        <div class="list-controls">
+            <input id="creatureSearch" type="search" aria-label="Search creatures by name" placeholder="Search creatures by name" oninput="displayCreatureLibrary()">
+            <select id="creatureSort" aria-label="Sort creatures" onchange="displayCreatureLibrary()">
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+                <option value="cr-asc">CR low to high</option>
+                <option value="cr-desc">CR high to low</option>
+            </select>
+        </div>
+        <div id="creatureList"></div>
+    </section>
+    
+    <section id="playersScreen" style="display: none;">
+        <h2>Player Library</h2>
+        <h3>Add New Player</h3>
+        <input id="playerName" placeholder="Character Name">
+        <input id="playerAC" type="number"
+            placeholder="Armor Class">
+        <input id="playerInit" type="number"
+            placeholder="Initiative Modifier">
+        <label for="playerLevel">Character Level</label>
+        <input id="playerLevel" type="number" min="1" max="20" value="1">
+
+        <button id="savePlayerButton" onclick="savePlayer()">Save Player</button>
+        <h3>Saved Players</h3>
+        <div class="list-controls">
+            <input id="playerSearch" type="search" aria-label="Search players by name" placeholder="Search players by name" oninput="displayPlayerLibrary()">
+            <select id="playerSort" aria-label="Sort players" onchange="displayPlayerLibrary()">
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+                <option value="level-asc">Level low to high</option>
+                <option value="level-desc">Level high to low</option>
+            </select>
+        </div>
+        <div id="playerList"></div>
+    </section>
+
+    <section id="lootScreen" style="display: none;">
+        <h2>Loot Library</h2>
+        <h3>Add Loot</h3>
+        <label for="lootName">Name</label>
+        <input id="lootName" placeholder="Loot name">
+        <label for="lootRarity">Rarity</label>
+        <select id="lootRarity">
+            <option value="Common">Common</option>
+            <option value="Uncommon">Uncommon</option>
+            <option value="Rare">Rare</option>
+            <option value="Very Rare">Very Rare</option>
+            <option value="Legendary">Legendary</option>
+        </select>
+        <label for="lootDetails">Details (optional)</label>
+        <input id="lootDetails" placeholder="Description or notes">
+        <button id="saveLootButton" onclick="saveLoot()">Save Loot</button>
+        <h3>Saved Loot</h3>
+        <div class="list-controls">
+            <input id="lootSearch" type="search" aria-label="Search loot by name" placeholder="Search loot by name" oninput="displayLootLibrary()">
+            <select id="lootSort" aria-label="Sort loot" onchange="displayLootLibrary()">
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+                <option value="rarity-asc">Rarity low to high</option>
+                <option value="rarity-desc">Rarity high to low</option>
+            </select>
+        </div>
+        <div id="lootList"></div>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>
