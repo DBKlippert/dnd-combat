@@ -13,6 +13,7 @@
         <button type="button" data-screen="creatures" onclick="showScreen('creatures')">Creatures</button>
         <button type="button" data-screen="players" onclick="showScreen('players')">Players</button>
         <button type="button" data-screen="npcs" onclick="showScreen('npcs')">NPCs</button>
+        <button type="button" data-screen="storyNpcs" onclick="showScreen('storyNpcs')">Story NPCs</button>
         <button type="button" data-screen="loot" onclick="showScreen('loot')">Loot</button>
     </nav>
     <div class="backup-controls">
@@ -246,6 +247,33 @@
             </select>
         </div>
         <div id="npcList"></div>
+    </section>
+
+    <section id="storyNpcsScreen" style="display: none;">
+        <h2>Story NPC / Specialty Character Library</h2>
+        <h3>Add Specialty Character</h3>
+        <label for="storyNpcName">Name</label>
+        <input id="storyNpcName" placeholder="Character name">
+        <label for="storyNpcRole">Role</label>
+        <input id="storyNpcRole" placeholder="Title, role, or relation">
+        <label for="storyNpcHP">Hit Points</label>
+        <input id="storyNpcHP" type="number" min="1" placeholder="Hit Points">
+        <label for="storyNpcAC">Armor Class</label>
+        <input id="storyNpcAC" type="number" min="1" placeholder="Armor Class">
+        <label for="storyNpcNotes">Notes</label>
+        <input id="storyNpcNotes" placeholder="Hook, agenda, personality, or story details">
+        <button id="saveStoryNpcButton" type="button" onclick="saveStoryNpc()">Save Story NPC</button>
+        <h3>Saved Story NPCs</h3>
+        <div class="list-controls">
+            <input id="storyNpcSearch" type="search" aria-label="Search story NPCs by name" placeholder="Search story NPCs by name" oninput="displayStoryNpcLibrary()">
+            <select id="storyNpcSort" aria-label="Sort story NPCs" onchange="displayStoryNpcLibrary()">
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+                <option value="hp-asc">HP low to high</option>
+                <option value="hp-desc">HP high to low</option>
+            </select>
+        </div>
+        <div id="storyNpcList"></div>
     </section>
 
     <section id="lootScreen" style="display: none;">

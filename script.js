@@ -14,6 +14,8 @@ let creatureLibrary = loadLibrary("creatureLibrary");
 let editingCreatureId = null;
 let npcLibrary = loadLibrary("npcLibrary");
 let editingNpcId = null;
+let storyNpcLibrary = loadLibrary("storyNpcLibrary");
+let editingStoryNpcId = null;
 let playerLibrary = loadLibrary("playerLibrary");
 let editingPlayerId = null;
 let lootLibrary = loadLibrary("lootLibrary");
@@ -22,6 +24,7 @@ let lootGenerated = false;
 let lootedMonsterIds = new Set();
 let effectTargetId = null;
 let generatedEncounter = [];
+let encounterSaveTimer = null;
 
 const commonEffects = [
     "Blinded", "Charmed", "Deafened", "Exhaustion", "Frightened",
@@ -297,7 +300,12 @@ function displayCombatants(){
         list.appendChild(entry);
 }
     updateCombatDanger();
-    saveCurrentEncounter();
+    if (encounterSaveTimer) {
+        clearTimeout(encounterSaveTimer);
+    }
+    encounterSaveTimer = setTimeout(() => {
+        saveCurrentEncounter();
+    }, 0);
     }
 
 function updateCombatDanger() {
@@ -523,13 +531,18 @@ function resetEffectDialog() {
 }
 
 function checkCombatFinished() {
-    let monsters = combatants.filter(combatant => combatant.type === "monster");
-    if (monsters.length === 0 || monsters.some(monster => monster.hp > 0) || lootGenerated) {
-        return;
-    }
+    if (lootGenerated) return;
 
-    let rewardableMonsters = monsters.filter(monster => !lootedMonsterIds.has(monster.id));
-    let protectedNpcs = combatants.filter(combatant =>
+    let hostileCombatants = combatants.filter(combatant =>
+        combatant.type === "monster" || combatant.type === "npc"
+    );
+    if (hostileCombatants.length === 0) return;
+    if (hostileCombatants.some(combatant => combatant.hp > 0)) return;
+
+    let rewardableMonsters = hostileCombatants.filter(combatant =>
+        combatant.type === "monster" && !lootedMonsterIds.has(combatant.id)
+    );
+    let protectedNpcs = hostileCombatants.filter(combatant =>
         combatant.type === "npc" && combatant.hp > 0 && !lootedMonsterIds.has(combatant.id)
     );
     let rewardableCombatants = rewardableMonsters.concat(protectedNpcs);
@@ -684,18 +697,20 @@ function sortInitiative(){
 }
 
 function rollMonsterInitiative() {
-    let monsters = combatants.filter(combatant => combatant.type === "monster");
-    if (monsters.length === 0) {
-        alert("Add a monster to combat before rolling monster initiative.");
+    let hostileCombatants = combatants.filter(combatant =>
+        combatant.type === "monster" || combatant.type === "npc"
+    );
+    if (hostileCombatants.length === 0) {
+        alert("Add a monster or NPC to combat before rolling initiative.");
         return;
     }
 
-    for (let monster of monsters) {
-        let modifier = Number.isFinite(monster.initiativeModifier)
-            ? monster.initiativeModifier
-            : Number(monster.initiative) || 0;
-        monster.initiativeModifier = modifier;
-        monster.initiative = Math.floor(Math.random() * 20) + 1 + modifier;
+    for (let combatant of hostileCombatants) {
+        let modifier = Number.isFinite(combatant.initiativeModifier)
+            ? combatant.initiativeModifier
+            : Number(combatant.initiative) || 0;
+        combatant.initiativeModifier = modifier;
+        combatant.initiative = Math.floor(Math.random() * 20) + 1 + modifier;
     }
     displayCombatants();
 }
@@ -705,6 +720,7 @@ function showScreen(screen){
     document.getElementById("creaturesScreen").style.display = "none";
     document.getElementById("playersScreen").style.display = "none";
     document.getElementById("npcsScreen").style.display = "none";
+    document.getElementById("storyNpcsScreen").style.display = "none";
     document.getElementById("encounterScreen").style.display = "none";
     document.getElementById("lootScreen").style.display = "none";
     document.getElementById(screen + "Screen").style.display = "block";
@@ -1127,6 +1143,56 @@ function saveNpc() {
     document.getElementById("npcAC").value = "";
 }
 
+function saveStoryNpc() {
+    let name = document.getElementById("storyNpcName").value.trim();
+    let role = document.getElementById("storyNpcRole").value.trim();
+    let hpText = document.getElementById("storyNpcHP").value;
+    let acText = document.getElementById("storyNpcAC").value;
+    let notes = document.getElementById("storyNpcNotes").value.trim();
+    let hp = Number(hpText);
+    let ac = Number(acText);
+
+    if (!name || hpText === "" || !Number.isInteger(hp) || hp <= 0 ||
+        acText === "" || !Number.isInteger(ac) || ac <= 0) {
+        alert("Enter a name, positive hit points, and a positive AC for the story NPC.");
+        return;
+    }
+
+    if (editingStoryNpcId === null) {
+        storyNpcLibrary.push({
+            id: "story-npc-" + Date.now() + "-" + Math.random(),
+            name: name,
+            role: role,
+            hp: hp,
+            ac: ac,
+            notes: notes,
+            challengeRating: "1/8",
+            level: 1,
+            isStoryNpc: true
+        });
+    } else {
+        let storyNpc = storyNpcLibrary.find(item => item.id === editingStoryNpcId);
+        if (!storyNpc) return;
+        storyNpc.name = name;
+        storyNpc.role = role;
+        storyNpc.hp = hp;
+        storyNpc.ac = ac;
+        storyNpc.notes = notes;
+        storyNpc.isStoryNpc = true;
+    }
+
+    editingStoryNpcId = null;
+    document.getElementById("saveStoryNpcButton").textContent = "Save Story NPC";
+    localStorage.setItem("storyNpcLibrary", JSON.stringify(storyNpcLibrary));
+    document.getElementById("storyNpcSearch").value = "";
+    displayStoryNpcLibrary();
+    document.getElementById("storyNpcName").value = "";
+    document.getElementById("storyNpcRole").value = "";
+    document.getElementById("storyNpcHP").value = "";
+    document.getElementById("storyNpcAC").value = "";
+    document.getElementById("storyNpcNotes").value = "";
+}
+
 function displayNpcLibrary() {
     let list = document.getElementById("npcList");
     list.innerHTML = "";
@@ -1176,6 +1242,61 @@ function displayNpcLibrary() {
 
     if (visibleNpcs.length === 0) {
         list.textContent = query ? "No matching NPCs." : "No saved NPCs yet.";
+    }
+}
+
+function displayStoryNpcLibrary() {
+    let list = document.getElementById("storyNpcList");
+    list.innerHTML = "";
+    let query = document.getElementById("storyNpcSearch").value.trim().toLowerCase();
+    let sortOrder = document.getElementById("storyNpcSort").value;
+    let visibleStoryNpcs = storyNpcLibrary.filter(npc =>
+        npc.name.toLowerCase().includes(query)
+    );
+
+    visibleStoryNpcs.sort((first, second) => {
+        if (sortOrder === "hp-asc" || sortOrder === "hp-desc") {
+            let hpOrder = first.hp - second.hp;
+            return sortOrder === "hp-asc" ? hpOrder : -hpOrder;
+        }
+        let nameOrder = first.name.localeCompare(second.name, undefined, { sensitivity: "base" });
+        return sortOrder === "name-desc" ? -nameOrder : nameOrder;
+    });
+
+    for (let npc of visibleStoryNpcs) {
+        let entry = document.createElement("p");
+        let details = npc.role ? " | Role: " + npc.role : "";
+        let notes = npc.notes ? " | Notes: " + npc.notes : "";
+        entry.textContent = npc.name + " | HP: " + npc.hp + " | AC: " + npc.ac + details + notes;
+
+        let addButton = document.createElement("button");
+        addButton.textContent = "Add to Combat";
+        addButton.className = "add-combat-button";
+        addButton.onclick = function() {
+            addStoryNpcToCombat(npc.id);
+        };
+        entry.appendChild(addButton);
+
+        let editButton = document.createElement("button");
+        editButton.textContent = "Edit";
+        editButton.className = "edit-button";
+        editButton.onclick = function() {
+            editStoryNpc(npc.id);
+        };
+        entry.appendChild(editButton);
+
+        let deleteButton = document.createElement("button");
+        deleteButton.textContent = "Delete";
+        deleteButton.className = "delete-button";
+        deleteButton.onclick = function() {
+            deleteStoryNpc(npc.id);
+        };
+        entry.appendChild(deleteButton);
+        list.appendChild(entry);
+    }
+
+    if (visibleStoryNpcs.length === 0) {
+        list.textContent = query ? "No matching story NPCs." : "No saved story NPCs yet.";
     }
 }
 
@@ -1346,11 +1467,36 @@ function addNpcToCombat(npcId) {
     checkCombatFinished();
 }
 
+function addStoryNpcToCombat(storyNpcId) {
+    let storyNpc = storyNpcLibrary.find(item => item.id === storyNpcId);
+    if (!storyNpc) return;
+
+    combatants.push({
+        id: "combat-story-npc-" + Date.now() + "-" + Math.random(),
+        libraryId: storyNpc.id,
+        name: storyNpc.name,
+        type: "npc",
+        initiative: null,
+        initiativeModifier: 0,
+        hp: storyNpc.hp,
+        maxHP: storyNpc.hp,
+        ac: storyNpc.ac,
+        challengeRating: "1/8",
+        level: 1,
+        effects: [],
+        storyRole: storyNpc.role,
+        storyNotes: storyNpc.notes
+    });
+    clearCombatLoot();
+    displayCombatants();
+    checkCombatFinished();
+}
+
 function deletePlayer(id) {
     let player = playerLibrary.find(p => p.id===id);
     if(!player) return;
     let confirmed = confirm(
-        "Permanently delete " + player.name + "from your library?"
+        "Permanently delete " + player.name + " from your library?"
     );
 
     if(!confirmed) return;
@@ -1373,6 +1519,18 @@ function editNpc(id) {
     document.getElementById("saveNpcButton").textContent = "Update NPC";
 }
 
+function editStoryNpc(id) {
+    let storyNpc = storyNpcLibrary.find(item => item.id === id);
+    if (!storyNpc) return;
+    editingStoryNpcId = id;
+    document.getElementById("storyNpcName").value = storyNpc.name;
+    document.getElementById("storyNpcRole").value = storyNpc.role || "";
+    document.getElementById("storyNpcHP").value = storyNpc.hp;
+    document.getElementById("storyNpcAC").value = storyNpc.ac;
+    document.getElementById("storyNpcNotes").value = storyNpc.notes || "";
+    document.getElementById("saveStoryNpcButton").textContent = "Update Story NPC";
+}
+
 function deleteNpc(id) {
     let npc = npcLibrary.find(item => item.id === id);
     if (!npc || !confirm("Permanently delete " + npc.name + " from your NPC library?")) {
@@ -1388,6 +1546,25 @@ function deleteNpc(id) {
     }
     localStorage.setItem("npcLibrary", JSON.stringify(npcLibrary));
     displayNpcLibrary();
+}
+
+function deleteStoryNpc(id) {
+    let storyNpc = storyNpcLibrary.find(item => item.id === id);
+    if (!storyNpc || !confirm("Permanently delete " + storyNpc.name + " from your story NPC library?")) {
+        return;
+    }
+    storyNpcLibrary = storyNpcLibrary.filter(item => item.id !== id);
+    if (editingStoryNpcId === id) {
+        editingStoryNpcId = null;
+        document.getElementById("saveStoryNpcButton").textContent = "Save Story NPC";
+        document.getElementById("storyNpcName").value = "";
+        document.getElementById("storyNpcRole").value = "";
+        document.getElementById("storyNpcHP").value = "";
+        document.getElementById("storyNpcAC").value = "";
+        document.getElementById("storyNpcNotes").value = "";
+    }
+    localStorage.setItem("storyNpcLibrary", JSON.stringify(storyNpcLibrary));
+    displayStoryNpcLibrary();
 }
 
 function addCreatureToCombat(creatureId) {
@@ -1475,6 +1652,7 @@ function exportSavedData() {
         creatureLibrary: creatureLibrary,
         playerLibrary: playerLibrary,
         npcLibrary: npcLibrary,
+        storyNpcLibrary: storyNpcLibrary,
         lootLibrary: lootLibrary
     };
     let file = new Blob([JSON.stringify(backup, null, 2)], {
@@ -1533,6 +1711,17 @@ function importSavedData(event) {
                             (npc.challengeRating === undefined || npc.challengeRating === "1/8") &&
                             (npc.level === undefined || npc.level === 1)
                         )));
+            let validStoryNpcs = backup &&
+                (backup.storyNpcLibrary === undefined ||
+                    (Array.isArray(backup.storyNpcLibrary) &&
+                        backup.storyNpcLibrary.every(npc =>
+                            npc && typeof npc.id === "string" &&
+                            typeof npc.name === "string" &&
+                            (npc.role === undefined || typeof npc.role === "string") &&
+                            Number.isFinite(npc.hp) && npc.hp > 0 &&
+                            Number.isFinite(npc.ac) && npc.ac > 0 &&
+                            (npc.notes === undefined || typeof npc.notes === "string")
+                        )));
             let validLoot = backup &&
                 (backup.lootLibrary === undefined ||
                     (Array.isArray(backup.lootLibrary) &&
@@ -1545,12 +1734,12 @@ function importSavedData(event) {
                                 (Number.isFinite(item.valueGp) && item.valueGp >= 0))
                         )));
 
-            if (!validCreatures || !validPlayers || !validNpcs || !validLoot) {
+            if (!validCreatures || !validPlayers || !validNpcs || !validStoryNpcs || !validLoot) {
                 alert("That file is not a valid DM's Grimoire backup.");
                 return;
             }
 
-            if (!confirm("Replace the saved creatures, players, NPCs, and loot on this computer with this backup? Older backups without NPCs or loot will keep the current libraries.")) {
+            if (!confirm("Replace the saved creatures, players, NPCs, story NPCs, and loot on this computer with this backup? Older backups without story NPCs or loot will keep the current libraries.")) {
                 return;
             }
 
@@ -1558,15 +1747,19 @@ function importSavedData(event) {
             localStorage.setItem("playerLibrary", JSON.stringify(backup.playerLibrary));
             let importedNpcs = backup.npcLibrary === undefined ? npcLibrary : backup.npcLibrary;
             localStorage.setItem("npcLibrary", JSON.stringify(importedNpcs));
+            let importedStoryNpcs = backup.storyNpcLibrary === undefined ? storyNpcLibrary : backup.storyNpcLibrary;
+            localStorage.setItem("storyNpcLibrary", JSON.stringify(importedStoryNpcs));
             let importedLoot = backup.lootLibrary === undefined ? lootLibrary : backup.lootLibrary;
             localStorage.setItem("lootLibrary", JSON.stringify(importedLoot));
             creatureLibrary = backup.creatureLibrary;
             playerLibrary = backup.playerLibrary;
             npcLibrary = importedNpcs;
+            storyNpcLibrary = importedStoryNpcs;
             lootLibrary = importedLoot;
             displayCreatureLibrary();
             displayPlayerLibrary();
             displayNpcLibrary();
+            displayStoryNpcLibrary();
             displayLootLibrary();
             alert("Backup imported.");
         } catch (error) {
@@ -1595,5 +1788,6 @@ if (!restoreCurrentEncounter()) {
 displayCreatureLibrary();
 displayPlayerLibrary();
 displayNpcLibrary();
+displayStoryNpcLibrary();
 displayLootLibrary();
 
