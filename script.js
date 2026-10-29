@@ -64,6 +64,29 @@ const lootItemsByTier = {
 };
 
 const lootRarities = ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"];
+const lootValueModifiers = [
+    { name: "Fine", percent: 5 },
+    { name: "Superior", percent: 10 },
+    { name: "Masterwork", percent: 15 },
+    { name: "Worn", percent: -5 },
+    { name: "Poor", percent: -10 },
+    { name: "Damaged", percent: -15 }
+];
+
+function formatLootValueModifier(item, modifiers = lootValueModifiers) {
+    let modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+    let percentage = (modifier.percent > 0 ? "+" : "") + modifier.percent + "%";
+    let result = " | " + modifier.name + " (" + percentage + ")";
+
+    if (Number.isFinite(item.valueGp)) {
+        let adjustedValue = Math.max(0, Math.round(item.valueGp * (1 + modifier.percent / 100) * 100) / 100);
+        let formattedValue = Number.isInteger(adjustedValue)
+            ? String(adjustedValue)
+            : adjustedValue.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+        result += " | Value: " + formattedValue + " gp";
+    }
+    return result;
+}
 
 function nextTurn(){
     if(combatants.length === 0) return;
@@ -564,7 +587,8 @@ function checkCombatFinished() {
         let item = itemPool[Math.floor(Math.random() * itemPool.length)];
         let itemReward = document.createElement("li");
         itemReward.textContent = item.rarity + " loot: " + item.name +
-            (item.details ? " - " + item.details : "");
+            (item.details ? " - " + item.details : "") +
+            formatLootValueModifier(item);
         rewards.appendChild(itemReward);
     } else {
         let noItem = document.createElement("li");
@@ -579,7 +603,8 @@ function checkCombatFinished() {
         let item = overLevelledItems[Math.floor(Math.random() * overLevelledItems.length)];
         let bonusReward = document.createElement("li");
         bonusReward.textContent = "Lucky over-levelled find: " + item.rarity + " loot: " + item.name +
-            (item.details ? " - " + item.details : "");
+            (item.details ? " - " + item.details : "") +
+            formatLootValueModifier(item, lootValueModifiers.filter(modifier => modifier.percent > 0));
         rewards.appendChild(bonusReward);
     }
 
@@ -1158,8 +1183,14 @@ function saveLoot() {
     let name = document.getElementById("lootName").value.trim();
     let rarity = document.getElementById("lootRarity").value;
     let details = document.getElementById("lootDetails").value.trim();
+    let valueText = document.getElementById("lootValueGp").value;
+    let valueGp = valueText === "" ? null : Number(valueText);
     if (!name) {
         alert("Enter a name for this loot.");
+        return;
+    }
+    if (valueGp !== null && (!Number.isFinite(valueGp) || valueGp < 0)) {
+        alert("Enter a nonnegative value in gold pieces.");
         return;
     }
 
@@ -1168,7 +1199,8 @@ function saveLoot() {
             id: "loot-" + Date.now() + "-" + Math.random(),
             name: name,
             rarity: rarity,
-            details: details
+            details: details,
+            valueGp: valueGp
         });
     } else {
         let loot = lootLibrary.find(item => item.id === editingLootId);
@@ -1176,6 +1208,7 @@ function saveLoot() {
         loot.name = name;
         loot.rarity = rarity;
         loot.details = details;
+        loot.valueGp = valueGp;
     }
 
     editingLootId = null;
@@ -1186,6 +1219,7 @@ function saveLoot() {
     document.getElementById("lootName").value = "";
     document.getElementById("lootRarity").value = "Common";
     document.getElementById("lootDetails").value = "";
+    document.getElementById("lootValueGp").value = "";
 }
 
 function displayLootLibrary() {
@@ -1207,7 +1241,8 @@ function displayLootLibrary() {
     for (let loot of visibleLoot) {
         let entry = document.createElement("p");
         entry.textContent = loot.name + " | " + loot.rarity +
-            (loot.details ? " | " + loot.details : "");
+            (loot.details ? " | " + loot.details : "") +
+            (Number.isFinite(loot.valueGp) ? " | Value: " + loot.valueGp + " gp" : "");
 
         let editButton = document.createElement("button");
         editButton.textContent = "Edit";
@@ -1239,6 +1274,7 @@ function editLoot(id) {
     document.getElementById("lootName").value = loot.name;
     document.getElementById("lootRarity").value = loot.rarity;
     document.getElementById("lootDetails").value = loot.details || "";
+    document.getElementById("lootValueGp").value = Number.isFinite(loot.valueGp) ? loot.valueGp : "";
     document.getElementById("saveLootButton").textContent = "Update Loot";
 }
 
@@ -1504,7 +1540,9 @@ function importSavedData(event) {
                             item && typeof item.id === "string" &&
                             typeof item.name === "string" &&
                             lootRarities.includes(item.rarity) &&
-                            (item.details === undefined || typeof item.details === "string")
+                            (item.details === undefined || typeof item.details === "string") &&
+                            (item.valueGp === undefined ||
+                                (Number.isFinite(item.valueGp) && item.valueGp >= 0))
                         )));
 
             if (!validCreatures || !validPlayers || !validNpcs || !validLoot) {
