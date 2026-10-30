@@ -1,5 +1,5 @@
 body{
-    background-color:#1c1c24;
+    background-color:#171922;
     color: #e8dcc5;
     font-family: Georgia, serif;
     padding: 20px;
@@ -19,7 +19,7 @@ h1{
 }
 
 h2{
-    border-bottom: 2px solid #c9a66b;
+    border-bottom: 2px solid #59615e;
     padding-bottom: 10px;
 }
 
@@ -28,7 +28,7 @@ h3{
 }
 
 p{
-    background-color:#2b2b36;
+    background-color:#1f222c;
     padding: 12px;
     border-radius: 6px;
 }
@@ -60,7 +60,7 @@ button:active {
     border: 1px solid #59615e;
     border-left-width: 5px;
     border-radius: 4px;
-    background: #2b2b36;
+    background: #20242d;
 }
 
 .danger-rating strong {
@@ -74,31 +74,31 @@ button:active {
 
 .danger-easy {
     border-color: #57a773;
-    background: #173d2b;
+    background: #18362a;
     color: #dcffe8;
 }
 
 .danger-medium {
     border-color: #d7ad35;
-    background: #4b3b0d;
+    background: #2f2c1d;
     color: #fff1b8;
 }
 
 .danger-hard {
     border-color: #df8740;
-    background: #542f14;
+    background: #30261f;
     color: #ffe1c1;
 }
 
 .danger-deadly {
     border-color: #dd6269;
-    background: #511d25;
+    background: #2a1e23;
     color: #ffdfe1;
 }
 
-.active{
-    background-color: #66502e;
-    border: 2px solid #c9a66b;
+.active:not(.screen){
+    background-color: #2b2d32;
+    border: 2px solid #59615e;
     font-weight: bold;
 }
 
@@ -174,7 +174,7 @@ button:active {
 .story-npc-tag {
     border-color: #d3b26a;
     color: #f5e4b1;
-    background: rgba(211, 178, 106, 0.12);
+    background: rgba(21, 22, 28, 0.9);
 }
 
 .remove-effect-button {
@@ -189,7 +189,7 @@ dialog {
     padding: 20px;
     border: 1px solid #c9a66b;
     border-radius: 6px;
-    background: #1c1c24;
+    background: #171922;
     color: #e8dcc5;
 }
 
@@ -216,7 +216,7 @@ dialog input {
     padding: 10px;
     border: 1px solid #c9a66b;
     border-radius: 4px;
-    background: #2b2b36;
+    background: #1f222c;
     color: #ffffff;
 }
 
@@ -291,7 +291,7 @@ nav button:hover:not(.selected) {
 
 nav button.selected {
     border-color: #85a78f;
-    background: #365845;
+    background: #2a332f;
     color: #ffffff;
 }
 

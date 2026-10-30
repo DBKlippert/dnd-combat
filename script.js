@@ -1164,13 +1164,15 @@ function saveStoryNpc() {
     let role = document.getElementById("storyNpcRole").value.trim();
     let hpText = document.getElementById("storyNpcHP").value;
     let acText = document.getElementById("storyNpcAC").value;
+    let challengeRating = document.getElementById("storyNpcCR").value;
     let notes = document.getElementById("storyNpcNotes").value.trim();
     let hp = Number(hpText);
     let ac = Number(acText);
 
     if (!name || hpText === "" || !Number.isInteger(hp) || hp <= 0 ||
-        acText === "" || !Number.isInteger(ac) || ac <= 0) {
-        alert("Enter a name, positive hit points, and a positive AC for the story NPC.");
+        acText === "" || !Number.isInteger(ac) || ac <= 0 ||
+        challengeRatingXP[challengeRating] === undefined) {
+        alert("Enter a name, positive hit points, a positive AC, and a valid challenge rating for the story NPC.");
         return;
     }
 
@@ -1182,7 +1184,7 @@ function saveStoryNpc() {
             hp: hp,
             ac: ac,
             notes: notes,
-            challengeRating: "1/8",
+            challengeRating: challengeRating,
             level: 1,
             isStoryNpc: true
         });
@@ -1193,6 +1195,7 @@ function saveStoryNpc() {
         storyNpc.role = role;
         storyNpc.hp = hp;
         storyNpc.ac = ac;
+        storyNpc.challengeRating = challengeRating;
         storyNpc.notes = notes;
         storyNpc.isStoryNpc = true;
     }
@@ -1206,6 +1209,7 @@ function saveStoryNpc() {
     document.getElementById("storyNpcRole").value = "";
     document.getElementById("storyNpcHP").value = "";
     document.getElementById("storyNpcAC").value = "";
+    document.getElementById("storyNpcCR").value = "1";
     document.getElementById("storyNpcNotes").value = "";
     alert("Story NPC saved.");
 }
@@ -1283,8 +1287,9 @@ function displayStoryNpcLibrary() {
     for (let npc of visibleStoryNpcs) {
         let entry = document.createElement("p");
         let details = npc.role ? " | Role: " + npc.role : "";
+        let cr = npc.challengeRating || "1/8";
         let notes = npc.notes ? " | Notes: " + npc.notes : "";
-        entry.textContent = npc.name + " | HP: " + npc.hp + " | AC: " + npc.ac + details + notes;
+        entry.textContent = npc.name + " | HP: " + npc.hp + " | AC: " + npc.ac + " | CR: " + cr + details + notes;
 
         let addButton = document.createElement("button");
         addButton.textContent = "Add to Combat";
@@ -1498,7 +1503,7 @@ function addStoryNpcToCombat(storyNpcId) {
         hp: storyNpc.hp,
         maxHP: storyNpc.hp,
         ac: storyNpc.ac,
-        challengeRating: "1/8",
+        challengeRating: storyNpc.challengeRating || "1/8",
         level: 1,
         effects: [],
         storyRole: storyNpc.role,
@@ -1544,6 +1549,7 @@ function editStoryNpc(id) {
     document.getElementById("storyNpcRole").value = storyNpc.role || "";
     document.getElementById("storyNpcHP").value = storyNpc.hp;
     document.getElementById("storyNpcAC").value = storyNpc.ac;
+    document.getElementById("storyNpcCR").value = storyNpc.challengeRating || "1";
     document.getElementById("storyNpcNotes").value = storyNpc.notes || "";
     document.getElementById("saveStoryNpcButton").textContent = "Update Story NPC";
 }
@@ -1578,6 +1584,7 @@ function deleteStoryNpc(id) {
         document.getElementById("storyNpcRole").value = "";
         document.getElementById("storyNpcHP").value = "";
         document.getElementById("storyNpcAC").value = "";
+        document.getElementById("storyNpcCR").value = "1";
         document.getElementById("storyNpcNotes").value = "";
     }
     localStorage.setItem("storyNpcLibrary", JSON.stringify(storyNpcLibrary));
@@ -1737,6 +1744,8 @@ function importSavedData(event) {
                             (npc.role === undefined || typeof npc.role === "string") &&
                             Number.isFinite(npc.hp) && npc.hp > 0 &&
                             Number.isFinite(npc.ac) && npc.ac > 0 &&
+                            (npc.challengeRating === undefined ||
+                                Object.prototype.hasOwnProperty.call(challengeRatingXP, npc.challengeRating)) &&
                             (npc.notes === undefined || typeof npc.notes === "string")
                         )));
             let validLoot = backup &&
