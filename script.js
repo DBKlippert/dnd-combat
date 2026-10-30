@@ -334,10 +334,10 @@ function updateCombatDanger() {
         return;
     }
 
-    if (players.length === 0) {
+    if (!players.some(combatant => combatant.type === "player")) {
         panel.className = "danger-rating danger-neutral";
         title.textContent = "Not rated";
-        details.textContent = "Add players or allied Story NPCs to calculate difficulty.";
+        details.textContent = "Add a player to calculate difficulty; allied Story NPCs count toward party size.";
         return;
     }
 
@@ -410,9 +410,6 @@ function restoreEncounterState(state) {
         }
         if (combatant.type === "storyNpc") {
             combatant.isPlayerAlly = combatant.isPlayerAlly === true;
-            if (!Number.isInteger(combatant.level) || combatant.level < 1 || combatant.level > 20) {
-                combatant.level = 1;
-            }
         }
         return combatant;
     });
@@ -575,22 +572,28 @@ function checkCombatFinished() {
             (combatant.type === "npc" ? "1/8" : "0");
         return sum + (challengeRatingXP[challengeRating] || 10);
     }, 0);
-    let party = combatants.filter(combatant =>
-        combatant.type === "player" ||
-        (combatant.type === "storyNpc" && combatant.isPlayerAlly)
-    );
+    let party = combatants.filter(combatant => combatant.type === "player");
     let averagePartyLevel = party.length
         ? party.reduce((sum, player) => sum + (player.level || 1), 0) / party.length
         : 1;
     let levelTier = averagePartyLevel >= 17 ? "Legendary" :
         averagePartyLevel >= 11 ? "Very Rare" :
         averagePartyLevel >= 5 ? "Rare" : "Uncommon";
+    let alliedStoryNpcXP = getAlliedStoryNpcXP(combatants);
+    let alliedCrTier = alliedStoryNpcXP >= 50000 ? "Legendary" :
+        alliedStoryNpcXP >= 18000 ? "Very Rare" :
+        alliedStoryNpcXP >= 7200 ? "Rare" :
+        alliedStoryNpcXP >= 1800 ? "Uncommon" : "Common";
     let xpTier = totalXP >= 50000 ? "Legendary" :
         totalXP >= 18000 ? "Very Rare" :
         totalXP >= 7200 ? "Rare" :
         totalXP >= 1800 ? "Uncommon" : "Common";
     let tierOrder = ["Common", "Uncommon", "Rare", "Very Rare", "Legendary"];
-    let tier = tierOrder[Math.min(tierOrder.indexOf(levelTier), tierOrder.indexOf(xpTier))];
+    let partyTier = tierOrder[Math.max(
+        tierOrder.indexOf(levelTier),
+        tierOrder.indexOf(alliedCrTier)
+    )];
+    let tier = tierOrder[Math.min(tierOrder.indexOf(partyTier), tierOrder.indexOf(xpTier))];
     let gold = Math.max(1, Math.round(totalXP * (0.025 + Math.random() * 0.025)));
     let itemChance = tier === "Common" ? 0.2 :
         tier === "Uncommon" ? 0.35 :
@@ -791,6 +794,13 @@ function getEncounterMultiplier(monsterCount, partySize) {
     return multipliers[multiplierIndex];
 }
 
+function getAlliedStoryNpcXP(party) {
+    return party.reduce((total, combatant) => {
+        if (combatant.type !== "storyNpc" || !combatant.isPlayerAlly) return total;
+        return total + (challengeRatingXP[combatant.challengeRating || "0"] || 10);
+    }, 0);
+}
+
 function rateEncounter(monsters, party) {
     let baseXP = monsters.reduce((sum, monster) => {
         let cr = monster.challengeRating || "0";
@@ -799,21 +809,27 @@ function rateEncounter(monsters, party) {
     let multiplier = getEncounterMultiplier(monsters.length, party.length);
     let adjustedXP = Math.round(baseXP * multiplier);
 
-    if (party.length === 0) {
+    let thresholdParty = party.filter(member => member.type !== "storyNpc");
+    if (thresholdParty.length === 0) {
         return { baseXP, adjustedXP, multiplier, difficulty: null };
     }
 
     let thresholds = [0, 0, 0, 0];
-    for (let player of party) {
+    for (let player of thresholdParty) {
         let level = Math.max(1, Math.min(20, Number(player.level) || 1));
         let playerThresholds = encounterThresholdsByLevel[level];
         thresholds = thresholds.map((threshold, index) => threshold + playerThresholds[index]);
     }
+    let alliedStoryNpcXP = getAlliedStoryNpcXP(party);
+    let allyThresholdShares = [0.25, 0.5, 0.75, 1];
+    thresholds = thresholds.map((threshold, index) =>
+        threshold + Math.round(alliedStoryNpcXP * allyThresholdShares[index])
+    );
 
     let difficulty = adjustedXP <= thresholds[0] ? "Easy" :
         adjustedXP <= thresholds[1] ? "Medium" :
         adjustedXP <= thresholds[2] ? "Hard" : "Deadly";
-    return { baseXP, adjustedXP, multiplier, difficulty, thresholds };
+    return { baseXP, adjustedXP, multiplier, difficulty, thresholds, alliedStoryNpcXP };
 }
 
 function generateRandomEncounter() {
@@ -1183,8 +1199,6 @@ function saveStoryNpc() {
     let hpText = document.getElementById("storyNpcHP").value;
     let acText = document.getElementById("storyNpcAC").value;
     let challengeRating = document.getElementById("storyNpcCR").value;
-    let levelText = document.getElementById("storyNpcLevel").value;
-    let level = Number(levelText);
     let isPlayerAlly = document.getElementById("storyNpcAlly").checked;
     let notes = document.getElementById("storyNpcNotes").value.trim();
     let hp = Number(hpText);
@@ -1192,9 +1206,8 @@ function saveStoryNpc() {
 
     if (!name || hpText === "" || !Number.isInteger(hp) || hp <= 0 ||
         acText === "" || !Number.isInteger(ac) || ac <= 0 ||
-        levelText === "" || !Number.isInteger(level) || level < 1 || level > 20 ||
         challengeRatingXP[challengeRating] === undefined) {
-        alert("Enter a name, positive hit points, a positive AC, a level from 1 to 20, and a valid challenge rating for the story NPC.");
+        alert("Enter a name, positive hit points, a positive AC, and a valid challenge rating for the story NPC.");
         return;
     }
 
@@ -1207,7 +1220,6 @@ function saveStoryNpc() {
             ac: ac,
             notes: notes,
             challengeRating: challengeRating,
-            level: level,
             isPlayerAlly: isPlayerAlly,
             isStoryNpc: true
         });
@@ -1219,7 +1231,7 @@ function saveStoryNpc() {
         storyNpc.hp = hp;
         storyNpc.ac = ac;
         storyNpc.challengeRating = challengeRating;
-        storyNpc.level = level;
+        delete storyNpc.level;
         storyNpc.isPlayerAlly = isPlayerAlly;
         storyNpc.notes = notes;
         storyNpc.isStoryNpc = true;
@@ -1235,7 +1247,6 @@ function saveStoryNpc() {
     document.getElementById("storyNpcHP").value = "";
     document.getElementById("storyNpcAC").value = "";
     document.getElementById("storyNpcCR").value = "1";
-    document.getElementById("storyNpcLevel").value = "1";
     document.getElementById("storyNpcAlly").checked = false;
     document.getElementById("storyNpcNotes").value = "";
     alert("Story NPC saved.");
@@ -1316,10 +1327,9 @@ function displayStoryNpcLibrary() {
         let details = npc.role ? " | Role: " + npc.role : "";
         let cr = npc.challengeRating || "1/8";
         let side = npc.isPlayerAlly ? " | Players' side" : " | Hostile";
-        let level = Number.isInteger(npc.level) ? npc.level : 1;
         let notes = npc.notes ? " | Notes: " + npc.notes : "";
         entry.textContent = npc.name + " | HP: " + npc.hp + " | AC: " + npc.ac + " | CR: " + cr +
-            " | Level: " + level + side + details + notes;
+            side + details + notes;
 
         let addButton = document.createElement("button");
         addButton.textContent = "Add to Combat";
@@ -1534,7 +1544,6 @@ function addStoryNpcToCombat(storyNpcId) {
         maxHP: storyNpc.hp,
         ac: storyNpc.ac,
         challengeRating: storyNpc.challengeRating || "1/8",
-        level: storyNpc.level || 1,
         isPlayerAlly: storyNpc.isPlayerAlly === true,
         effects: [],
         storyRole: storyNpc.role,
@@ -1581,7 +1590,6 @@ function editStoryNpc(id) {
     document.getElementById("storyNpcHP").value = storyNpc.hp;
     document.getElementById("storyNpcAC").value = storyNpc.ac;
     document.getElementById("storyNpcCR").value = storyNpc.challengeRating || "1";
-    document.getElementById("storyNpcLevel").value = storyNpc.level || 1;
     document.getElementById("storyNpcAlly").checked = storyNpc.isPlayerAlly === true;
     document.getElementById("storyNpcNotes").value = storyNpc.notes || "";
     document.getElementById("saveStoryNpcButton").textContent = "Update Story NPC";
@@ -1618,7 +1626,6 @@ function deleteStoryNpc(id) {
         document.getElementById("storyNpcHP").value = "";
         document.getElementById("storyNpcAC").value = "";
         document.getElementById("storyNpcCR").value = "1";
-        document.getElementById("storyNpcLevel").value = "1";
         document.getElementById("storyNpcAlly").checked = false;
         document.getElementById("storyNpcNotes").value = "";
     }
@@ -1779,8 +1786,6 @@ function importSavedData(event) {
                             (npc.role === undefined || typeof npc.role === "string") &&
                             Number.isFinite(npc.hp) && npc.hp > 0 &&
                             Number.isFinite(npc.ac) && npc.ac > 0 &&
-                            (npc.level === undefined ||
-                                (Number.isInteger(npc.level) && npc.level >= 1 && npc.level <= 20)) &&
                             (npc.isPlayerAlly === undefined || typeof npc.isPlayerAlly === "boolean") &&
                             (npc.challengeRating === undefined ||
                                 Object.prototype.hasOwnProperty.call(challengeRatingXP, npc.challengeRating)) &&
