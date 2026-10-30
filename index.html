@@ -297,6 +297,12 @@
             <option value="29">29</option>
             <option value="30">30</option>
         </select>
+        <label for="storyNpcLevel">Character Level</label>
+        <input id="storyNpcLevel" type="number" min="1" max="20" value="1" placeholder="Level">
+        <label class="checkbox-field" for="storyNpcAlly">
+            <input id="storyNpcAlly" type="checkbox">
+            On the players' side
+        </label>
         <label for="storyNpcNotes">Notes</label>
         <input id="storyNpcNotes" placeholder="Hook, agenda, personality, or story details">
         <button id="saveStoryNpcButton" type="button" onclick="saveStoryNpc()">Save Story NPC</button>

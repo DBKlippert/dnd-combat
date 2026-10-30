@@ -138,7 +138,7 @@ function displayCombatants(){
         if (combatant.type === "storyNpc") {
             let storyNpcTag = document.createElement("span");
             storyNpcTag.className = "npc-tag story-npc-tag";
-            storyNpcTag.textContent = "Story";
+            storyNpcTag.textContent = combatant.isPlayerAlly ? "Story Ally" : "Story";
             label.appendChild(storyNpcTag);
         }
         
@@ -319,9 +319,13 @@ function updateCombatDanger() {
     let title = document.getElementById("combatDangerTitle");
     let details = document.getElementById("combatDangerDetails");
     let encounterCreatures = combatants.filter(combatant =>
-        combatant.type === "monster" || combatant.type === "npc" || combatant.type === "storyNpc"
+        combatant.type === "monster" || combatant.type === "npc" ||
+        (combatant.type === "storyNpc" && !combatant.isPlayerAlly)
     );
-    let players = combatants.filter(combatant => combatant.type === "player");
+    let players = combatants.filter(combatant =>
+        combatant.type === "player" ||
+        (combatant.type === "storyNpc" && combatant.isPlayerAlly)
+    );
 
     if (encounterCreatures.length === 0) {
         panel.className = "danger-rating danger-neutral";
@@ -333,7 +337,7 @@ function updateCombatDanger() {
     if (players.length === 0) {
         panel.className = "danger-rating danger-neutral";
         title.textContent = "Not rated";
-        details.textContent = "Add players to combat to calculate difficulty.";
+        details.textContent = "Add players or allied Story NPCs to calculate difficulty.";
         return;
     }
 
@@ -341,7 +345,7 @@ function updateCombatDanger() {
     panel.className = "danger-rating danger-" + rating.difficulty.toLowerCase();
     title.textContent = rating.difficulty;
     details.textContent = rating.adjustedXP + " adjusted XP across " +
-        encounterCreatures.length + " creature(s) and " + players.length + " player(s).";
+        encounterCreatures.length + " enemy/enemies and " + players.length + " party member(s).";
 }
 
 function buildEncounterState() {
@@ -403,6 +407,12 @@ function restoreEncounterState(state) {
         }
         if (!Array.isArray(combatant.effects)) {
             combatant.effects = [];
+        }
+        if (combatant.type === "storyNpc") {
+            combatant.isPlayerAlly = combatant.isPlayerAlly === true;
+            if (!Number.isInteger(combatant.level) || combatant.level < 1 || combatant.level > 20) {
+                combatant.level = 1;
+            }
         }
         return combatant;
     });
@@ -540,13 +550,15 @@ function checkCombatFinished() {
     if (lootGenerated) return;
 
     let hostileCombatants = combatants.filter(combatant =>
-        combatant.type === "monster" || combatant.type === "npc" || combatant.type === "storyNpc"
+        combatant.type === "monster" || combatant.type === "npc" ||
+        (combatant.type === "storyNpc" && !combatant.isPlayerAlly)
     );
     if (hostileCombatants.length === 0) return;
     if (hostileCombatants.some(combatant => combatant.hp > 0)) return;
 
     let rewardableMonsters = hostileCombatants.filter(combatant =>
-        combatant.type === "monster" && !lootedMonsterIds.has(combatant.id)
+        (combatant.type === "monster" || combatant.type === "storyNpc") &&
+        combatant.hp <= 0 && !lootedMonsterIds.has(combatant.id)
     );
     let protectedNpcs = hostileCombatants.filter(combatant =>
         (combatant.type === "npc" || combatant.type === "storyNpc") &&
@@ -563,7 +575,10 @@ function checkCombatFinished() {
             (combatant.type === "npc" ? "1/8" : "0");
         return sum + (challengeRatingXP[challengeRating] || 10);
     }, 0);
-    let party = combatants.filter(combatant => combatant.type === "player");
+    let party = combatants.filter(combatant =>
+        combatant.type === "player" ||
+        (combatant.type === "storyNpc" && combatant.isPlayerAlly)
+    );
     let averagePartyLevel = party.length
         ? party.reduce((sum, player) => sum + (player.level || 1), 0) / party.length
         : 1;
@@ -752,8 +767,11 @@ function showScreen(screen){
 }
 
 function getEncounterParty() {
-    let activePlayers = combatants.filter(combatant => combatant.type === "player");
-    return activePlayers.length > 0 ? activePlayers : playerLibrary;
+    let activeParty = combatants.filter(combatant =>
+        combatant.type === "player" ||
+        (combatant.type === "storyNpc" && combatant.isPlayerAlly)
+    );
+    return activeParty.length > 0 ? activeParty : playerLibrary;
 }
 
 function getEncounterMultiplier(monsterCount, partySize) {
@@ -1165,14 +1183,18 @@ function saveStoryNpc() {
     let hpText = document.getElementById("storyNpcHP").value;
     let acText = document.getElementById("storyNpcAC").value;
     let challengeRating = document.getElementById("storyNpcCR").value;
+    let levelText = document.getElementById("storyNpcLevel").value;
+    let level = Number(levelText);
+    let isPlayerAlly = document.getElementById("storyNpcAlly").checked;
     let notes = document.getElementById("storyNpcNotes").value.trim();
     let hp = Number(hpText);
     let ac = Number(acText);
 
     if (!name || hpText === "" || !Number.isInteger(hp) || hp <= 0 ||
         acText === "" || !Number.isInteger(ac) || ac <= 0 ||
+        levelText === "" || !Number.isInteger(level) || level < 1 || level > 20 ||
         challengeRatingXP[challengeRating] === undefined) {
-        alert("Enter a name, positive hit points, a positive AC, and a valid challenge rating for the story NPC.");
+        alert("Enter a name, positive hit points, a positive AC, a level from 1 to 20, and a valid challenge rating for the story NPC.");
         return;
     }
 
@@ -1185,7 +1207,8 @@ function saveStoryNpc() {
             ac: ac,
             notes: notes,
             challengeRating: challengeRating,
-            level: 1,
+            level: level,
+            isPlayerAlly: isPlayerAlly,
             isStoryNpc: true
         });
     } else {
@@ -1196,6 +1219,8 @@ function saveStoryNpc() {
         storyNpc.hp = hp;
         storyNpc.ac = ac;
         storyNpc.challengeRating = challengeRating;
+        storyNpc.level = level;
+        storyNpc.isPlayerAlly = isPlayerAlly;
         storyNpc.notes = notes;
         storyNpc.isStoryNpc = true;
     }
@@ -1210,6 +1235,8 @@ function saveStoryNpc() {
     document.getElementById("storyNpcHP").value = "";
     document.getElementById("storyNpcAC").value = "";
     document.getElementById("storyNpcCR").value = "1";
+    document.getElementById("storyNpcLevel").value = "1";
+    document.getElementById("storyNpcAlly").checked = false;
     document.getElementById("storyNpcNotes").value = "";
     alert("Story NPC saved.");
 }
@@ -1288,8 +1315,11 @@ function displayStoryNpcLibrary() {
         let entry = document.createElement("p");
         let details = npc.role ? " | Role: " + npc.role : "";
         let cr = npc.challengeRating || "1/8";
+        let side = npc.isPlayerAlly ? " | Players' side" : " | Hostile";
+        let level = Number.isInteger(npc.level) ? npc.level : 1;
         let notes = npc.notes ? " | Notes: " + npc.notes : "";
-        entry.textContent = npc.name + " | HP: " + npc.hp + " | AC: " + npc.ac + " | CR: " + cr + details + notes;
+        entry.textContent = npc.name + " | HP: " + npc.hp + " | AC: " + npc.ac + " | CR: " + cr +
+            " | Level: " + level + side + details + notes;
 
         let addButton = document.createElement("button");
         addButton.textContent = "Add to Combat";
@@ -1504,7 +1534,8 @@ function addStoryNpcToCombat(storyNpcId) {
         maxHP: storyNpc.hp,
         ac: storyNpc.ac,
         challengeRating: storyNpc.challengeRating || "1/8",
-        level: 1,
+        level: storyNpc.level || 1,
+        isPlayerAlly: storyNpc.isPlayerAlly === true,
         effects: [],
         storyRole: storyNpc.role,
         storyNotes: storyNpc.notes
@@ -1550,6 +1581,8 @@ function editStoryNpc(id) {
     document.getElementById("storyNpcHP").value = storyNpc.hp;
     document.getElementById("storyNpcAC").value = storyNpc.ac;
     document.getElementById("storyNpcCR").value = storyNpc.challengeRating || "1";
+    document.getElementById("storyNpcLevel").value = storyNpc.level || 1;
+    document.getElementById("storyNpcAlly").checked = storyNpc.isPlayerAlly === true;
     document.getElementById("storyNpcNotes").value = storyNpc.notes || "";
     document.getElementById("saveStoryNpcButton").textContent = "Update Story NPC";
 }
@@ -1585,6 +1618,8 @@ function deleteStoryNpc(id) {
         document.getElementById("storyNpcHP").value = "";
         document.getElementById("storyNpcAC").value = "";
         document.getElementById("storyNpcCR").value = "1";
+        document.getElementById("storyNpcLevel").value = "1";
+        document.getElementById("storyNpcAlly").checked = false;
         document.getElementById("storyNpcNotes").value = "";
     }
     localStorage.setItem("storyNpcLibrary", JSON.stringify(storyNpcLibrary));
@@ -1744,6 +1779,9 @@ function importSavedData(event) {
                             (npc.role === undefined || typeof npc.role === "string") &&
                             Number.isFinite(npc.hp) && npc.hp > 0 &&
                             Number.isFinite(npc.ac) && npc.ac > 0 &&
+                            (npc.level === undefined ||
+                                (Number.isInteger(npc.level) && npc.level >= 1 && npc.level <= 20)) &&
+                            (npc.isPlayerAlly === undefined || typeof npc.isPlayerAlly === "boolean") &&
                             (npc.challengeRating === undefined ||
                                 Object.prototype.hasOwnProperty.call(challengeRatingXP, npc.challengeRating)) &&
                             (npc.notes === undefined || typeof npc.notes === "string")
