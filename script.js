@@ -201,8 +201,9 @@ function displayCombatants(){
         entry.appendChild(label);
 
         let effects = Array.isArray(combatant.effects) ? combatant.effects : [];
+        let effectsList = null;
         if (effects.length > 0) {
-            let effectsList = document.createElement("span");
+            effectsList = document.createElement("span");
             effectsList.className = "effect-list";
             for (let effect of effects) {
                 let effectTag = document.createElement("span");
@@ -226,7 +227,6 @@ function displayCombatants(){
                 effectTag.appendChild(removeButton);
                 effectsList.appendChild(effectTag);
             }
-            entry.appendChild(effectsList);
         }
 
         let effectsButton = document.createElement("button");
@@ -351,6 +351,9 @@ function displayCombatants(){
             else {
                 entry.classList.add("downed");
             }
+        }
+        if (effectsList) {
+            entry.appendChild(effectsList);
         }
         list.appendChild(entry);
 }

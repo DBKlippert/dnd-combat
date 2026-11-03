@@ -161,10 +161,12 @@ button:active {
 }
 
 .effect-list {
-    display: flex;
+    display: inline-flex;
     flex-wrap: wrap;
+    vertical-align: middle;
     gap: 6px;
-    margin: 6px 0;
+    max-width: 100%;
+    margin: 4px;
 }
 
 .effect-tag {
