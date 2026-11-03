@@ -97,7 +97,7 @@ button:active {
 }
 
 .active:not(.screen){
-    background-color: #2b2d32;
+    background-color: #a4a57299;
     border: 2px solid #59615e;
     font-weight: bold;
 }
@@ -110,6 +110,24 @@ button:active {
     color: #e8dcc5;
     border: 1px solid #c9a66b;
     border-radius: 5px;
+}
+
+.combat-notes {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 160px;
+    max-width: 35vw;
+    min-width: 110px;
+    height: 34px;
+    min-height: 34px;
+    margin: 4px;
+    padding: 6px;
+    border: 1px solid #59615e;
+    border-radius: 4px;
+    background: #1f222c;
+    color: #e8dcc5;
+    resize: vertical;
+    vertical-align: middle;
 }
 
 #combatantList button {
@@ -176,6 +194,31 @@ button:active {
     color: #f5e4b1;
     background: rgba(21, 22, 28, 0.9);
 }
+
+.monster-marker {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    border: 1px solid rgb(255 255 255 / 70%);
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: bold;
+    vertical-align: middle;
+}
+
+.monster-marker-0 { background: #245b8a; }
+.monster-marker-1 { background: #26704a; }
+.monster-marker-2 { background: #a56a13; }
+.monster-marker-3 { background: #a93539; }
+.monster-marker-4 { background: #157a78; }
+.monster-marker-5 { background: #a64276; }
+.monster-marker-6 { background: #6250a0; }
+.monster-marker-7 { background: #5e6f22; }
 
 .remove-effect-button {
     padding: 2px 6px;

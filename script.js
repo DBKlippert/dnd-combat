@@ -24,13 +24,32 @@ let lootGenerated = false;
 let lootedMonsterIds = new Set();
 let effectTargetId = null;
 let generatedEncounter = [];
+
+function assignMonsterMarkers() {
+    let usedMarkersByName = new Map();
+    for (let combatant of combatants) {
+        if (combatant.type !== "monster") continue;
+
+        let usedMarkers = usedMarkersByName.get(combatant.name) || new Set();
+        let markerIndex = Number.isInteger(combatant.markerIndex) &&
+            !usedMarkers.has(combatant.markerIndex)
+            ? combatant.markerIndex
+            : 0;
+        while (usedMarkers.has(markerIndex)) markerIndex++;
+        combatant.markerIndex = markerIndex;
+        usedMarkers.add(markerIndex);
+        usedMarkersByName.set(combatant.name, usedMarkers);
+    }
+}
 let encounterSaveTimer = null;
 
 const commonEffects = [
     "Blinded", "Charmed", "Deafened", "Exhaustion", "Frightened",
     "Grappled", "Incapacitated", "Invisible", "Paralyzed", "Petrified",
     "Poisoned", "Prone", "Restrained", "Stunned", "Unconscious",
-    "Sleep", "Bless", "Concentrating", "Haste", "Hex", "Other"
+    "Sleep", "Aid", "Bardic Inspiration", "Bless", "Enhance Ability",
+    "Guidance", "Haste", "Heroism", "Longstrider", "Protection from Evil and Good",
+    "Sanctuary", "Shield of Faith", "Concentrating", "Hex", "Other"
 ];
 
 const challengeRatingXP = {
@@ -121,6 +140,13 @@ function nextTurn(){
 function displayCombatants(){
     let list=document.getElementById("combatantList");
     list.innerHTML="";
+    let monsterNameCounts = new Map();
+    for (let combatant of combatants) {
+        if (combatant.type === "monster") {
+            monsterNameCounts.set(combatant.name,
+                (monsterNameCounts.get(combatant.name) || 0) + 1);
+        }
+    }
     
     for (let combatant of combatants){
         
@@ -140,6 +166,15 @@ function displayCombatants(){
             storyNpcTag.className = "npc-tag story-npc-tag";
             storyNpcTag.textContent = combatant.isPlayerAlly ? "Story Ally" : "Story";
             label.appendChild(storyNpcTag);
+        }
+        if (combatant.type === "monster" && monsterNameCounts.get(combatant.name) > 1) {
+            let markerIndex = Number.isInteger(combatant.markerIndex) ? combatant.markerIndex : 0;
+            let marker = document.createElement("span");
+            marker.className = "monster-marker monster-marker-" + (markerIndex % 8);
+            marker.textContent = String.fromCharCode(65 + (markerIndex % 26));
+            marker.title = combatant.name + " " + marker.textContent;
+            marker.setAttribute("aria-label", combatant.name + " marker " + marker.textContent);
+            label.appendChild(marker);
         }
         
         let initiativeInput = document.createElement("input");
@@ -258,7 +293,7 @@ function displayCombatants(){
 
         if (combatant.type === "monster" || combatant.type === "npc" || combatant.type === "storyNpc"){
             let hpDisplay = document.createElement("span");
-            hpDisplay.textContent = " - " + combatant.hp + "/" + combatant.maxHP + " HP";
+            hpDisplay.textContent = " - " + combatant.hp + "/" + combatant.maxHP + " HP | AC " + combatant.ac;
             
             entry.appendChild(hpDisplay);
             
@@ -285,6 +320,20 @@ function displayCombatants(){
             };
             
             entry.appendChild(healButton);
+
+            if (combatant.type === "monster") {
+                let notesInput = document.createElement("textarea");
+                notesInput.className = "combat-notes";
+                notesInput.placeholder = "Temporary notes";
+                notesInput.setAttribute("aria-label", combatant.name + " temporary combat notes");
+                notesInput.value = combatant.combatNotes || "";
+                notesInput.rows = 1;
+                notesInput.oninput = function() {
+                    combatant.combatNotes = notesInput.value;
+                    saveCurrentEncounter();
+                };
+                entry.appendChild(notesInput);
+            }
         }
         if (currentTurn >= 0 && combatants[currentTurn].id === combatant.id){
             entry.classList.add("active");
@@ -413,6 +462,7 @@ function restoreEncounterState(state) {
         }
         return combatant;
     });
+    assignMonsterMarkers();
     currentTurn = Number.isInteger(state.currentTurn) &&
         state.currentTurn >= 0 && state.currentTurn < combatants.length
         ? state.currentTurn
@@ -911,6 +961,7 @@ function addGeneratedEncounterToCombat() {
             effects: []
         });
     }
+    assignMonsterMarkers();
 
     generatedEncounter = [];
     document.getElementById("generatedEncounter").replaceChildren();
@@ -1652,6 +1703,7 @@ function addCreatureToCombat(creatureId) {
     
     clearCombatLoot();
     combatants.push(combatant);
+    assignMonsterMarkers();
 
     displayCombatants();
 }
@@ -1859,4 +1911,3 @@ displayPlayerLibrary();
 displayNpcLibrary();
 displayStoryNpcLibrary();
 displayLootLibrary();
-
